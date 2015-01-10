@@ -10,6 +10,8 @@ TARGET=code
 EEPROM=eesin.bin
 MKEE=./mkee
 
+default: code.hex eesin.bin clean
+
 program : code.hex eesin.bin
 	$(AVRDUDE) -p $(AVRDUDEMCU) -P /dev/parport0 -c dapa -U flash:w:$(TARGET).hex -U eeprom:w:$(EEPROM):r
 
@@ -26,4 +28,4 @@ mkee : mkee.c
 	$(HOSTCC) mkee.c -o mkee
 
 clean :
-	rm -f *.hex *.o
+	rm -f *.obj *.o *.cof
