@@ -1,4 +1,5 @@
 #define __AVR_ATmega48PA__
+#define F_CPU 18000000UL
 #include <avr/io.h>
 
 typedef unsigned char byte;
@@ -18,105 +19,55 @@ setup_ports(void)
 	DDRC = 0x03;
 	PORTC = 0x00;
 	DDRD = 0xFF;
-	PORTD = 0xFF;
-}
-
-void
-delay(short time)
-{
-	short i;
-	for (i = 0; i < time; i++)
-		;
-}
-
-void
-flt_clr(void)
-{
-	PORTD |= 0xFC;
-	delay(0x300);
-	PORTD &= 0x1F;
-	delay(0x300);
-	PORTD |= 0xE0;
-	delay(0x300);
+	PORTD = 0x00;
 }
 
 #define SETBIT(x, n) ((x) |= (1 << n))
 #define CLRBIT(x, n) ((x) &= (0xFF ^ (1 << n)))
 
-void
-set_bridge_u(byte U)
-{
-	byte port = PORTD;
-	if (U == 0) {
-		SETBIT(port, 2);
-		CLRBIT(port, 5);
-	} else {
-		SETBIT(port, 5);
-		CLRBIT(port, 2);
-	}
-	PORTD = port;
-}
+#define UL 5
+#define VL 6
+#define WL 7
 
-void
-set_bridge_v(byte V)
-{
-	byte port = PORTD;
+#define UH 2
+#define VH 3
+#define WH 4
 
-	if (V == 0) {
-		SETBIT(port, 3);
-		CLRBIT(port, 6);
-	} else {
-		SETBIT(port, 6);
-		CLRBIT(port, 3);
-	}
-	PORTD = port;
-}
-
-void
-set_bridge_w(byte W)
-{
-	byte port = PORTD;
-
-	if (W == 0) {
-		SETBIT(port, 4);
-		CLRBIT(port, 7);
-	} else {
-		SETBIT(port, 7);
-		CLRBIT(port, 4);
-	}
-	PORTD = port;
-}
-
-void
-block_bridge(void)
-{
-	PORTD |= 0xFC;
-}
-
-byte ampl, period, phase, pwm_u, pwm_v, pwm_w;
+byte ampl, period, phase;
+register byte pwm_u, pwm_v, pwm_w;
 
 int main(void)
 {
-	int i;
+	register byte i;
 	setup_ports();
-	flt_clr();
 	phase = 0;
 	pwm_u = 10;
-	pwm_v = 100;
-	pwm_w = 255;
+	pwm_v = 50;
+	pwm_w = 100;
 	while (1) {
-		set_bridge_u(0);
-		set_bridge_v(0);
-		set_bridge_w(0);
-		for (i = 0; i < 256; i++) {
-			if (i == pwm_u)
-				set_bridge_u(1);
-			if (i == pwm_v)
-				set_bridge_v(1);
-			if (i == pwm_w)
-				set_bridge_w(1);
+		byte set = 0;
+		CLRBIT(PORTD, UL);
+		CLRBIT(PORTD, VL);
+		CLRBIT(PORTD, WL);
+		SETBIT(PORTD, UH);
+		SETBIT(PORTD, VH);
+		SETBIT(PORTD, WH);
+		for (i = 0; i < 100; i++) {
+			if (i == pwm_u) {
+				CLRBIT(PORTD, UH);
+				SETBIT(set, UL);
+			}
+			if (i == pwm_v) {
+				CLRBIT(PORTD, VH);
+				SETBIT(set, VL);
+			}
+			if (i == pwm_w) {
+				CLRBIT(PORTD, WH);
+				SETBIT(set, WL);
+			}
+			PORTD |= set;
 		}
-		block_bridge();
+		PORTD = 0;
 	}
 	return 0;
 }
