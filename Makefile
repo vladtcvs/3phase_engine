@@ -12,6 +12,12 @@ MKEE=./mkee
 
 default: code-c.hex eesin.bin clean
 
+mksin: mksin.c
+	$(HOSTCC) -o mksin mksin.c -lm
+
+sin.txt: mksin
+	./mksin
+
 program : code.hex eesin.bin
 	$(AVRDUDE) -p $(AVRDUDEMCU) -P /dev/parport0 -c dapa -U flash:w:code.hex -U eeprom:w:$(EEPROM):r
 
