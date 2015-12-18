@@ -36,7 +36,7 @@ set(HEADERS_FILES )
 add_custom_target(mkee gcc -o mkee ${CMAKE_SOURCE_DIR}/mkee.c)
 add_executable(fw.elf ${HEADERS_FILES} ${SOURCE_FILES})
 add_custom_target(fw.hex ${CMAKE_OBJCOPY} -j .text -j .data -O ihex fw.elf fw.hex)
-add_custom_target(programm ${CMAKE_AVRDUDE} -p ${AVRDUDEMCU} -P ${PPORT} -c stk500 -U flash:w:firmware.hex -U eeprom:w:eeprom.bin)
+add_custom_target(programm ${CMAKE_AVRDUDE} -p ${AVRDUDEMCU} -P ${PPORT} -c stk500 -U flash:w:fw.hex -U eeprom:w:eesin.bin)
 add_custom_target(eesin.bin ${MKEE} eesin.bin ${CMAKE_SOURCE_DIR}/sin.txt ${CMAKE_SOURCE_DIR}/ampl.txt ${CMAKE_SOURCE_DIR}/freq.txt)
 
 add_dependencies(eesin.bin mkee)
