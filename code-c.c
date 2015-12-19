@@ -21,7 +21,7 @@ typedef unsigned short word;
 #define PH_NUM 36
 byte sinus[PH_NUM];
 
-byte ampl, period;
+byte ampl = 0, period;
 byte ph_u, ph_v, ph_w;
 register byte pwm_u asm("r10"), pwm_v asm("r11"), pwm_w asm("r12");
 byte rs232_len = 0;
@@ -40,6 +40,8 @@ byte go;
 #define PER 'T'
 #define AMPL 'A'
 
+#define FREQ_MAX ((uint16_t)488) /* 18e6/1024/36 */
+
 void
 setup_ports(void)
 {
@@ -53,6 +55,7 @@ setup_ports(void)
 
 #define eeread(addr)  eeprom_read_byte((uint8_t*)((int)(addr)))
 
+/* freq rotation = 488 / period */
 void
 setup_timer(void)
 {
@@ -134,6 +137,9 @@ static void set_amplitude(void)
 static void set_freq(void)
 {
 	uint16_t rw = read_uint(&rs232_buf[1], rs232_len - 1);
+	if (rw == 0)
+		rw = 255;
+	rw = FREQ_MAX / rw;
 	period = rw < 256 ? rw : 255;
 }
 
@@ -233,7 +239,7 @@ read_config(void)
 		sinus[i] = eeread(i);
 	}
 	ampl = eeread(PH_NUM);
-	period = eeread(PH_NUM + 1);
+	period = FREQ_MAX/eeread(PH_NUM + 1);
 }
 
 int main(void)
@@ -242,7 +248,7 @@ int main(void)
 	read_config();
 	setup_timer();
 	setup_uart(9600UL);
-	go = 1;
+	go = 0;
 	ph_u = 0;
 	ph_v = 24;
 	ph_w = 12;
@@ -254,27 +260,27 @@ int main(void)
 	while (1) {
 		register byte i;
 		if (go) {
-			CLRBIT(PORTC, EU); 
-			CLRBIT(PORTC, EV); 
-			CLRBIT(PORTC, EW); 
+			SETBIT(PORTC, EU); 
+			SETBIT(PORTC, EV); 
+			SETBIT(PORTC, EW); 
+
+			_delay_loop_1(50);
 
 			SETBIT(PORTC, UU);
 			SETBIT(PORTC, UV);
 			SETBIT(PORTC, UW);
 
-			_delay_loop_1(50);
-
-			SETBIT(PORTC, EU); 
-			SETBIT(PORTC, EV); 
-			SETBIT(PORTC, EW); 
+			CLRBIT(PORTC, EU); 
+			CLRBIT(PORTC, EV); 
+			CLRBIT(PORTC, EW); 
 
 			for (i = 0; i < 100; i++) {
 				if (i == pwm_u) {
-					CLRBIT(PORTC, EU); // DISABLE U
+					SETBIT(PORTC, EU); // DISABLE U
 					CLRBIT(PORTC, UU);  // Set LOW
 				}
 				if (i == pwm_v) {
-					CLRBIT(PORTC, EV); // DISABLE VU
+					SETBIT(PORTC, EV); // DISABLE VU
 					CLRBIT(PORTC, UV);  // Set LOW
 				}
 				if (i == pwm_w) {
@@ -282,9 +288,9 @@ int main(void)
 					CLRBIT(PORTC, UW);  // Set LOW
 				}
 				_delay_loop_1(50);
-				SETBIT(PORTC, EU);
-				SETBIT(PORTC, EV);
-				SETBIT(PORTC, EW);
+				CLRBIT(PORTC, EU);
+				CLRBIT(PORTC, EV);
+				CLRBIT(PORTC, EW);
 			}
 		}
 		_delay_loop_1(50);
