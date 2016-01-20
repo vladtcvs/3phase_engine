@@ -10,13 +10,13 @@ typedef unsigned short word;
 #define SETBIT(x, n) ((x) |= (1 << n))
 #define CLRBIT(x, n) ((x) &= (0xFF - (1 << n)))
 
-#define EU 0
-#define EV 2
-#define EW 4
+#define EU 1
+#define EV 3
+#define EW 5
 
-#define UU 1
-#define UV 3
-#define UW 5
+#define UU 0
+#define UV 2
+#define UW 4
 
 #define PH_NUM 36
 byte sinus[PH_NUM];
@@ -41,6 +41,8 @@ byte go;
 #define AMPL 'A'
 
 #define FREQ_MAX ((uint16_t)488) /* 18e6/1024/36 */
+
+#define DISABLED 0x00
 
 void
 setup_ports(void)
@@ -120,7 +122,7 @@ static uint16_t read_uint(byte *arr, byte len)
 {
 	byte i = 0;
 	uint16_t res = 0;
-	while (i < len) {
+	while (i < len && (arr[i] >= '0' && arr[i] <= '9')) {
 		res *= 10;
 		res += arr[i] - '0';
 		i++;
@@ -247,8 +249,9 @@ int main(void)
 	setup_ports();
 	read_config();
 	setup_timer();
+	PORTC = DISABLED;
 	setup_uart(9600UL);
-	go = 0;
+	go = 1;
 	ph_u = 0;
 	ph_v = 24;
 	ph_w = 12;
@@ -260,40 +263,42 @@ int main(void)
 	while (1) {
 		register byte i;
 		if (go) {
-			SETBIT(PORTC, EU); 
-			SETBIT(PORTC, EV); 
-			SETBIT(PORTC, EW); 
+			/* Disable all phases */
+			PORTC &= ~((1 << EU) | (1 << EV) | (1 << EW));
 
-			_delay_loop_1(50);
+			/* Wait to turn mosfets off */
+			_delay_loop_2(50);
 
-			SETBIT(PORTC, UU);
-			SETBIT(PORTC, UV);
-			SETBIT(PORTC, UW);
+			/* Switch all bridges to HIGH */
+			PORTC |= ((1<<UU) | (1<<UV) | (1<<UW));
 
-			CLRBIT(PORTC, EU); 
-			CLRBIT(PORTC, EV); 
-			CLRBIT(PORTC, EW); 
+			/* Enable all phases */
+			PORTC |= ((1<<EU) | (1<<EV) | (1<<EW));
+			_delay_loop_2(50);
 
 			for (i = 0; i < 100; i++) {
-				if (i == pwm_u) {
-					SETBIT(PORTC, EU); // DISABLE U
-					CLRBIT(PORTC, UU);  // Set LOW
-				}
-				if (i == pwm_v) {
-					SETBIT(PORTC, EV); // DISABLE VU
-					CLRBIT(PORTC, UV);  // Set LOW
-				}
-				if (i == pwm_w) {
-					SETBIT(PORTC, EW); // DISABLE W
-					CLRBIT(PORTC, UW);  // Set LOW
-				}
-				_delay_loop_1(50);
-				CLRBIT(PORTC, EU);
-				CLRBIT(PORTC, EV);
-				CLRBIT(PORTC, EW);
+				if (i == pwm_u)
+					CLRBIT(PORTC, EU); // DISABLE U
+				if (i == pwm_v)
+					CLRBIT(PORTC, EV); // DISABLE V
+				if (i == pwm_w)
+					CLRBIT(PORTC, EW); // DISABLE W
+				_delay_loop_2(50);
+
+				if (i == pwm_u)
+					CLRBIT(PORTC, UU);  // Set U to LOW
+				if (i == pwm_v)
+					CLRBIT(PORTC, UV);  // Set V to LOW
+				if (i == pwm_w)
+					CLRBIT(PORTC, UW);  // Set W to LOW
+
+				/* Enable all phases */
+				PORTC |= ((1<<EU) | (1<<EV) | (1<<EW));
 			}
+		} else {
+			PORTC = DISABLED;
+			_delay_loop_1(250);
 		}
-		_delay_loop_1(50);
 	}
 	return 0;
 }
