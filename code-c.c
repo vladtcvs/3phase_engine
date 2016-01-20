@@ -251,49 +251,68 @@ int main(void)
 	setup_timer();
 	PORTC = DISABLED;
 	setup_uart(9600UL);
-	go = 1;
+	go = 0;
 	ph_u = 0;
 	ph_v = 24;
 	ph_w = 12;
-	pwm_u = 0;
-	pwm_v = 0;
-	pwm_w = 0;
+	pwm_u = 10;
+	pwm_v = 40;
+	pwm_w = 70;
 
 	sei();
 	while (1) {
 		register byte i;
 		if (go) {
+			int8_t cnt_u, cnt_v, cnt_w;
 			/* Disable all phases */
 			PORTC &= ~((1 << EU) | (1 << EV) | (1 << EW));
 
 			/* Wait to turn mosfets off */
-			_delay_loop_2(50);
+			_delay_loop_2(500);
 
 			/* Switch all bridges to HIGH */
 			PORTC |= ((1<<UU) | (1<<UV) | (1<<UW));
 
 			/* Enable all phases */
 			PORTC |= ((1<<EU) | (1<<EV) | (1<<EW));
-			_delay_loop_2(50);
+			//_delay_loop_2(50);
 
+			cnt_u = cnt_v = cnt_w = -1;
 			for (i = 0; i < 100; i++) {
-				if (i == pwm_u)
+				if (i == pwm_u) {
 					CLRBIT(PORTC, EU); // DISABLE U
-				if (i == pwm_v)
+					cnt_u = 3;
+				}
+				if (i == pwm_v) {
 					CLRBIT(PORTC, EV); // DISABLE V
-				if (i == pwm_w)
+					cnt_v = 3;
+				}
+				if (i == pwm_w) {
 					CLRBIT(PORTC, EW); // DISABLE W
-				_delay_loop_2(50);
-
-				if (i == pwm_u)
+					cnt_w = 3;
+				}
+				_delay_loop_2(200);
+				if (cnt_u == 0) {
 					CLRBIT(PORTC, UU);  // Set U to LOW
-				if (i == pwm_v)
+					PORTC |= (1<<EU);
+					cnt_u = -1;
+				}
+				if (cnt_v == 0) {
 					CLRBIT(PORTC, UV);  // Set V to LOW
-				if (i == pwm_w)
+					PORTC |= (1<<EV);
+					cnt_v = -1;
+				}
+				if (cnt_w == 0) {
 					CLRBIT(PORTC, UW);  // Set W to LOW
-
-				/* Enable all phases */
-				PORTC |= ((1<<EU) | (1<<EV) | (1<<EW));
+					PORTC |= (1<<EW);
+					cnt_w = -1;
+				}
+				if (cnt_u > 0)
+					cnt_u--;
+				if (cnt_v > 0)
+					cnt_v--;
+				if (cnt_w > 0)
+					cnt_w--;
 			}
 		} else {
 			PORTC = DISABLED;
