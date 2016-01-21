@@ -72,6 +72,8 @@ ISR(__vector_default, ISR_NAKED)
 	reti();
 }
 
+#define min(a, b) (((a) < (b)) ? (a) : (b))
+
 ISR(TIMER0_COMPA_vect)
 {
 	TCNT0 = 0;
@@ -85,9 +87,9 @@ ISR(TIMER0_COMPA_vect)
 	ph_w++;
 	if (ph_w == PH_NUM)
 		ph_w = 0;
-	pwm_u = (sinus[ph_u]*((word)ampl))>>8;
-	pwm_v = (sinus[ph_v]*((word)ampl))>>8;
-	pwm_w = (sinus[ph_w]*((word)ampl))>>8;
+	pwm_u = min((sinus[ph_u]*((word)ampl))>>8, 90);
+	pwm_v = min((sinus[ph_v]*((word)ampl))>>8, 90);
+	pwm_w = min((sinus[ph_w]*((word)ampl))>>8, 90);
 }
 
 static void set_cw(void)
@@ -255,20 +257,21 @@ int main(void)
 	ph_u = 0;
 	ph_v = 24;
 	ph_w = 12;
-	pwm_u = 10;
-	pwm_v = 40;
-	pwm_w = 70;
+	pwm_u = 0;
+	pwm_v = 0;
+	pwm_w = 0;
 
 	sei();
 	while (1) {
 		register byte i;
 		if (go) {
 			int8_t cnt_u, cnt_v, cnt_w;
+			int u_u, u_v, u_w;
 			/* Disable all phases */
 			PORTC &= ~((1 << EU) | (1 << EV) | (1 << EW));
 
 			/* Wait to turn mosfets off */
-			_delay_loop_2(500);
+			_delay_loop_2(600);
 
 			/* Switch all bridges to HIGH */
 			PORTC |= ((1<<UU) | (1<<UV) | (1<<UW));
@@ -278,18 +281,22 @@ int main(void)
 			//_delay_loop_2(50);
 
 			cnt_u = cnt_v = cnt_w = -1;
+			u_u = u_v = u_w = 1;
 			for (i = 0; i < 100; i++) {
-				if (i == pwm_u) {
+				if (i == pwm_u || (i > pwm_u && u_u)) {
 					CLRBIT(PORTC, EU); // DISABLE U
-					cnt_u = 3;
+					u_u = 0;
+					cnt_u = 5;
 				}
-				if (i == pwm_v) {
+				if (i == pwm_v || (i > pwm_v && u_v)) {
 					CLRBIT(PORTC, EV); // DISABLE V
-					cnt_v = 3;
+					u_v = 0;
+					cnt_v = 5;
 				}
-				if (i == pwm_w) {
+				if (i == pwm_w  || (i > pwm_w && u_w)) {
 					CLRBIT(PORTC, EW); // DISABLE W
-					cnt_w = 3;
+					u_w = 0;
+					cnt_w = 5;
 				}
 				_delay_loop_2(200);
 				if (cnt_u == 0) {
