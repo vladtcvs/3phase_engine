@@ -8,3 +8,8 @@ extern byte flags;
 
 #define FLAG_GO  (1<<0)
 #define FLAG_POT (1<<1)
+
+#define DELAY_STEP 170
+#define DELAY_NUM 6
+
+#define MAX_PWM 100

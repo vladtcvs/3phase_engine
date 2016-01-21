@@ -14,9 +14,6 @@
 #define UV 2
 #define UW 4
 
-#define DELAY_STEP 100
-#define DELAY_NUM 5
-
 static byte sinus[PH_NUM];
 
 byte ampl = 0, period;
@@ -70,11 +67,10 @@ ISR(TIMER0_COMPA_vect)
 	ph_w++;
 	if (ph_w == PH_NUM)
 		ph_w = 0;
-	pwm_u = min((sinus[ph_u]*((word)ampl))>>8, 90);
-	pwm_v = min((sinus[ph_v]*((word)ampl))>>8, 90);
-	pwm_w = min((sinus[ph_w]*((word)ampl))>>8, 90);
+	pwm_u = min((sinus[ph_u]*((word)ampl))>>8, MAX_PWM-3);
+	pwm_v = min((sinus[ph_v]*((word)ampl))>>8, MAX_PWM-3);
+	pwm_w = min((sinus[ph_w]*((word)ampl))>>8, MAX_PWM-3);
 }
-
 
 void
 read_config(void)
@@ -96,7 +92,7 @@ int main(void)
 	setup_control();
 	PORTC = DISABLED;
 	setup_uart(9600UL);
-	flags = 0;
+	flags = FLAG_POT;
 	ph_u = 0;
 	ph_v = 24;
 	ph_w = 12;
@@ -111,7 +107,7 @@ int main(void)
 		if ((flags & FLAG_POT) && cnt == 0)
 			read_speed();
 		cnt++;
-		cnt &= 0x1FF;
+		cnt &= 0x3F;
 		
 		if (flags & FLAG_GO) {
 			int8_t cnt_u, cnt_v, cnt_w;
@@ -131,7 +127,7 @@ int main(void)
 
 			cnt_u = cnt_v = cnt_w = -1;
 			u_u = u_v = u_w = 1;
-			for (i = 0; i < 100; i++) {
+			for (i = 0; i < MAX_PWM; i++) {
 				if (i == pwm_u || (i > pwm_u && u_u)) {
 					CLRBIT(PORTC, EU); // DISABLE U
 					u_u = 0;
