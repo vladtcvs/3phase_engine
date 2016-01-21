@@ -7,6 +7,8 @@
 typedef unsigned char byte;
 typedef unsigned short word;
 
+#define SET_AMPLITUDE_FREQ
+
 #define SETBIT(x, n) ((x) |= (1 << n))
 #define CLRBIT(x, n) ((x) &= (0xFF - (1 << n)))
 
@@ -18,16 +20,29 @@ typedef unsigned short word;
 #define UV 2
 #define UW 4
 
+#define PH_OFF 0
 #define PH_NUM 36
+
+#define AMPL_START PH_NUM
+#define FREQ_START (PH_NUM + 1)
+
+#define AMPL_OFF (PH_NUM + 2)
+#define AMPL_NUM 30
+
+#define DELAY_STEP 100
+#define DELAY_NUM 5
+
 byte sinus[PH_NUM];
 
 byte ampl = 0, period;
 byte ph_u, ph_v, ph_w;
 register byte pwm_u asm("r10"), pwm_v asm("r11"), pwm_w asm("r12");
-byte rs232_len = 0;
-byte rs232_buf[4];
 
-#define TXS 8
+#define RXS 16
+byte rs232_len = 0;
+byte rs232_buf[RXS];
+
+#define TXS 16
 byte rs232_buf_tx[TXS];
 byte rs232_len_tx = 0;
 byte go;
@@ -44,6 +59,8 @@ byte go;
 
 #define DISABLED 0x00
 
+static void tx_byte(byte c);
+
 void
 setup_ports(void)
 {
@@ -56,7 +73,7 @@ setup_ports(void)
 #define EEARH   _SFR_IO8(0x22)
 
 #define eeread(addr)  eeprom_read_byte((uint8_t*)((int)(addr)))
-
+#define eewrite(addr, val) eeprom_write_byte((uint8_t*)((int)(addr)), val)
 /* freq rotation = 488 / period */
 void
 setup_timer(void)
@@ -132,19 +149,91 @@ static uint16_t read_uint(byte *arr, byte len)
 	return res;
 }
 
+static const byte hexdig[] = "0123456789ABCDEF";
+
+static void print_int_dec(byte val)
+{
+	if (val >= 100)
+		tx_byte(hexdig[val/100]);
+	if (val >= 10)
+		tx_byte(hexdig[(val%100)/10]);
+	tx_byte(hexdig[val%10]);
+}
+
+static void print_int_hex(byte val)
+{
+	tx_byte(hexdig[val >> 4]);
+	tx_byte(hexdig[val & 0x0F]);
+}
+
 static void set_amplitude(void)
 {
-	uint16_t rw = read_uint(&rs232_buf[1], rs232_len - 1);
-	ampl = rw < 256 ? rw : 255;
+	if (rs232_len > 1) {
+		uint16_t rw = read_uint(&rs232_buf[1], rs232_len - 1);
+		ampl = rw < 256 ? rw : 255;
+	} else {
+		tx_byte('\n');
+		tx_byte('\r');
+		print_int_dec(ampl);
+	}
 }
 
 static void set_freq(void)
 {
-	uint16_t rw = read_uint(&rs232_buf[1], rs232_len - 1);
-	if (rw == 0)
-		rw = 255;
-	rw = FREQ_MAX / rw;
-	period = rw < 256 ? rw : 255;
+	if (rs232_len > 1) {
+		uint16_t rw = read_uint(&rs232_buf[1], rs232_len - 1);
+		if (rw == 0)
+			rw = 15;
+#ifdef SET_AMPLITUDE_FREQ
+		byte aid = rw/5;
+		if (aid >= AMPL_NUM)
+			aid = AMPL_NUM - 1;
+		ampl = eeread(AMPL_OFF + aid);
+#endif
+		rw = FREQ_MAX / rw;
+		period = rw < 256 ? rw : 255;
+	} else {
+		uint16_t fr;
+		if (period < 2)
+			fr = 255;
+		else 
+			fr = FREQ_MAX / period;
+		tx_byte('\n');
+		tx_byte('\r');
+		print_int_dec(fr);
+	}
+}
+
+static void read_eeprom(void)
+{
+	if (rs232_len < 3)
+		return;
+	uint16_t addr = read_uint(&rs232_buf[2], rs232_len - 2);
+	if (addr > 256)
+		return;
+	tx_byte('\n');
+	tx_byte('\r');
+	print_int_dec(eeread(addr));
+}
+
+static void write_eeprom(void)
+{
+	uint16_t addr = read_uint(&rs232_buf[2], rs232_len - 2), val;
+	byte i;
+	if (addr > 256)
+		return;
+	for (i = 2; i < rs232_len; i++)
+		if (rs232_buf[i] == '=')
+			break;
+	if (i >= rs232_len - 1) {
+		val = 0;
+	} else {
+		i++;
+		val = read_uint(&rs232_buf[i], rs232_len - i);
+	}
+	if (val >= 256)
+		return;
+	eewrite(addr, val);
 }
 
 void shell_handle(void)
@@ -170,6 +259,14 @@ void shell_handle(void)
 		break;
 	case 'F':
 		set_freq();
+		break;
+	case 'E':
+		if (rs232_len == 1)
+			break;
+		if (rs232_buf[1] == 'R')
+			read_eeprom();
+		else if (rs232_buf[1] == 'W')
+			write_eeprom();
 		break;
 	}
 }
@@ -197,6 +294,8 @@ static void tx_byte(byte c)
 	} else if (rs232_len_tx < TXS) {
 		rs232_buf_tx[rs232_len_tx++] = c;
 		UCSR0B |= (1<<TXCIE0);
+	} else {
+		rs232_len_tx = 0;
 	}
 }
 
@@ -216,8 +315,12 @@ ISR(USART_RX_vect)
 	case '\n':
 		break;
 	default:
-		rs232_buf[rs232_len++] = rcv;
-		tx_byte(rcv);
+		if (rs232_len < RXS - 1) {
+			rs232_buf[rs232_len++] = rcv;
+			tx_byte(rcv);
+		} else {
+			tx_byte('^');
+		}
 	}
 	UCSR0B |= (1<<RXCIE0);
 }
@@ -242,8 +345,8 @@ read_config(void)
 	for (i = 0; i < PH_NUM; i++) {
 		sinus[i] = eeread(i);
 	}
-	ampl = eeread(PH_NUM);
-	period = FREQ_MAX/eeread(PH_NUM + 1);
+	ampl = eeread(AMPL_START);
+	period = FREQ_MAX/eeread(FREQ_START);
 }
 
 int main(void)
@@ -271,7 +374,7 @@ int main(void)
 			PORTC &= ~((1 << EU) | (1 << EV) | (1 << EW));
 
 			/* Wait to turn mosfets off */
-			_delay_loop_2(600);
+			_delay_loop_2(DELAY_NUM * DELAY_STEP);
 
 			/* Switch all bridges to HIGH */
 			PORTC |= ((1<<UU) | (1<<UV) | (1<<UW));
@@ -286,19 +389,19 @@ int main(void)
 				if (i == pwm_u || (i > pwm_u && u_u)) {
 					CLRBIT(PORTC, EU); // DISABLE U
 					u_u = 0;
-					cnt_u = 5;
+					cnt_u = DELAY_NUM;
 				}
 				if (i == pwm_v || (i > pwm_v && u_v)) {
 					CLRBIT(PORTC, EV); // DISABLE V
 					u_v = 0;
-					cnt_v = 5;
+					cnt_v = DELAY_NUM;
 				}
 				if (i == pwm_w  || (i > pwm_w && u_w)) {
 					CLRBIT(PORTC, EW); // DISABLE W
 					u_w = 0;
-					cnt_w = 5;
+					cnt_w = DELAY_NUM;
 				}
-				_delay_loop_2(200);
+				_delay_loop_2(DELAY_STEP);
 				if (cnt_u == 0) {
 					CLRBIT(PORTC, UU);  // Set U to LOW
 					PORTC |= (1<<EU);
