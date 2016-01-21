@@ -3,8 +3,6 @@
 #include "uart.h"
 #include "pwm.h"
 
-#define SET_AMPLITUDE_FREQ
-
 #define SETBIT(x, n) ((x) |= (1 << n))
 #define CLRBIT(x, n) ((x) &= (0xFF - (1 << n)))
 
@@ -15,15 +13,6 @@
 #define UU 0
 #define UV 2
 #define UW 4
-
-#define PH_OFF 0
-#define PH_NUM PHASES
-
-#define AMPL_START PH_NUM
-#define FREQ_START (PH_NUM + 1)
-
-#define AMPL_OFF (PH_NUM + 2)
-#define AMPL_NUM 30
 
 #define DELAY_STEP 100
 #define DELAY_NUM 5

@@ -18,6 +18,8 @@ static byte rs232_len_tx = 0;
 #define PER 'T'
 #define AMPL 'A'
 
+void shell_handle(const char *buf, uint8_t len);
+
 void
 setup_uart(unsigned long bitrate)
 {
@@ -82,7 +84,7 @@ ISR(USART_RX_vect)
 	UCSR0B &= ~(1<<RXCIE0);
 	switch (rcv) {
 	case '\r':
-		shell_handle();
+		shell_handle((const char*)rs232_buf, rs232_len);
 		rs232_len = 0;
 		tx_byte('\r');
 		tx_byte('\n');

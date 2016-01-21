@@ -29,7 +29,7 @@ set(CMAKE_CXX_FLAGS ${CXXFLAGS})
 set(CMAKE_SHARED_LIBRARY_LINK_C_FLAGS "")
 set(CMAKE_SHARED_LIBRARY_LINK_CXX_FLAGS "")
 
-set(SOURCE_FILES code-c.c uart.c cmd.c)
+set(SOURCE_FILES adc.c code-c.c uart.c cmd.c)
 
 set(HEADERS_FILES )
 

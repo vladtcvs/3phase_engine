@@ -3,7 +3,7 @@
 #include "pwm.h"
 #include "uart.h"
 
-static uint16_t read_uint(const char *arr, byte len)
+static uint16_t read_uint(const char *arr, uint8_t len)
 {
 	byte i = 0;
 	uint16_t res = 0;
@@ -44,7 +44,7 @@ static void start_stop(byte en)
 }
 
 
-static void set_amplitude(const char *buf, int8_t len)
+static void set_amplitude(const char *buf, uint8_t len)
 {
 	if (len > 1) {
 		uint16_t rw = read_uint(&buf[1], len - 1);
@@ -56,20 +56,25 @@ static void set_amplitude(const char *buf, int8_t len)
 	}
 }
 
-static void set_freq(const char *buf, int8_t len)
+void set_freq_val(uint16_t fr)
+{
+#ifdef SET_AMPLITUDE_FREQ
+	byte aid = fr/5;
+	if (aid >= AMPL_NUM)
+		aid = AMPL_NUM - 1;
+	ampl = eeread(AMPL_OFF + aid);
+#endif
+	fr = FREQ_MAX / fr;
+	period = fr < 256 ? fr : 255;
+}
+
+static void set_freq(const char *buf, uint8_t len)
 {
 	if (len > 1) {
 		uint16_t rw = read_uint(&buf[1], len - 1);
 		if (rw == 0)
 			rw = 15;
-#ifdef SET_AMPLITUDE_FREQ
-		byte aid = rw/5;
-		if (aid >= AMPL_NUM)
-			aid = AMPL_NUM - 1;
-		ampl = eeread(AMPL_OFF + aid);
-#endif
-		rw = FREQ_MAX / rw;
-		period = rw < 256 ? rw : 255;
+		set_freq_val(rw);
 	} else {
 		uint16_t fr;
 		if (period < 2)
@@ -82,7 +87,7 @@ static void set_freq(const char *buf, int8_t len)
 	}
 }
 
-static void read_eeprom(const char *buf, int8_t len)
+static void read_eeprom(const char *buf, uint8_t len)
 {
 	if (len < 3)
 		return;
@@ -94,7 +99,7 @@ static void read_eeprom(const char *buf, int8_t len)
 	print_int_dec(eeread(addr));
 }
 
-static void write_eeprom(const char *buf, int8_t len)
+static void write_eeprom(const char *buf, uint8_t len)
 {
 	uint16_t addr = read_uint(&buf[2], len - 2), val;
 	byte i;
@@ -114,7 +119,7 @@ static void write_eeprom(const char *buf, int8_t len)
 	eewrite(addr, val);
 }
 
-void shell_handle(const char *buf, int8_t len)
+void shell_handle(const char *buf, uint8_t len)
 {
 	switch (buf[0]) {
 	case 'B':
