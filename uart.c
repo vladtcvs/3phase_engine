@@ -35,10 +35,14 @@ setup_uart(unsigned long bitrate)
 
 static const byte hexdig[] = "0123456789ABCDEF";
 
-void print_int_dec(byte val)
+void print_int_dec(uint16_t val)
 {
+	if (val >= 10000)
+		tx_byte(hexdig[val/10000]);
+	if (val >= 1000)
+		tx_byte(hexdig[(val%10000)/1000]);
 	if (val >= 100)
-		tx_byte(hexdig[val/100]);
+		tx_byte(hexdig[(val%1000)/100]);
 	if (val >= 10)
 		tx_byte(hexdig[(val%100)/10]);
 	tx_byte(hexdig[val%10]);

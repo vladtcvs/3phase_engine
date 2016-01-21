@@ -21,7 +21,11 @@ static byte sinus[PH_NUM];
 
 byte ampl = 0, period;
 byte ph_u, ph_v, ph_w;
-byte go;
+
+byte flags;
+
+void read_speed(void);
+void setup_control(void);
 
 register byte pwm_u asm("r10"), pwm_v asm("r11"), pwm_w asm("r12");
 
@@ -85,12 +89,14 @@ read_config(void)
 
 int main(void)
 {
+	int cnt;
 	setup_ports();
 	read_config();
 	setup_timer();
+	setup_control();
 	PORTC = DISABLED;
 	setup_uart(9600UL);
-	go = 0;
+	flags = 0;
 	ph_u = 0;
 	ph_v = 24;
 	ph_w = 12;
@@ -99,9 +105,15 @@ int main(void)
 	pwm_w = 0;
 
 	sei();
+	cnt = 0;
 	while (1) {
 		register byte i;
-		if (go) {
+		if ((flags & FLAG_POT) && cnt == 0)
+			read_speed();
+		cnt++;
+		cnt &= 0x1FF;
+		
+		if (flags & FLAG_GO) {
 			int8_t cnt_u, cnt_v, cnt_w;
 			int u_u, u_v, u_w;
 			/* Disable all phases */

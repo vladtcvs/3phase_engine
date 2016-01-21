@@ -15,13 +15,13 @@ static uint16_t read_uint(const char *arr, uint8_t len)
 	return res;
 }
 
-static void set_cw(void)
+void set_cw(void)
 {
 	ph_v = (ph_u + 12)%PHASES;
 	ph_w = (ph_u + 24)%PHASES;
 }
 
-static void set_ccw(void)
+void set_ccw(void)
 {
 	ph_w = (ph_u + 12)%PHASES;
 	ph_v = (ph_u + 24)%PHASES;
@@ -34,15 +34,16 @@ static void inverse(void)
 	ph_w = t;
 }
 
-static void start_stop(byte en)
+void start_stop(byte en)
 {
-	go = en;
-	if (en)
+	if (en) {
+		flags |= FLAG_GO;
 		PORTD |= 0x10;
-	else
+	} else {
+		flags &= ~FLAG_GO;
 		PORTD &= ~0x10;
+	}
 }
-
 
 static void set_amplitude(const char *buf, uint8_t len)
 {
@@ -121,12 +122,20 @@ static void write_eeprom(const char *buf, uint8_t len)
 
 void shell_handle(const char *buf, uint8_t len)
 {
+	if (len == 0)
+		return;
 	switch (buf[0]) {
 	case 'B':
 		start_stop(0);
 		break;
 	case 'G':
 		start_stop(1);
+		break;
+	case 'P':
+		flags |= FLAG_POT;
+		break;
+	case 'M':
+		flags &= ~FLAG_POT;
 		break;
 	case 'C':
 		set_cw();
