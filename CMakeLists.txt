@@ -29,10 +29,11 @@ set(CMAKE_CXX_FLAGS ${CXXFLAGS})
 set(CMAKE_SHARED_LIBRARY_LINK_C_FLAGS "")
 set(CMAKE_SHARED_LIBRARY_LINK_CXX_FLAGS "")
 
-set(SOURCE_FILES code-c.c)
+set(SOURCE_FILES code-c.c uart.c cmd.c)
 
 set(HEADERS_FILES )
 
+add_custom_target(mksin gcc -o mksin ${CMAKE_SOURCE_DIR}/mksin.c -lm)
 add_custom_target(mkee gcc -o mkee ${CMAKE_SOURCE_DIR}/mkee.c)
 add_executable(fw.elf ${HEADERS_FILES} ${SOURCE_FILES})
 add_custom_target(fw.hex ${CMAKE_OBJCOPY} -j .text -j .data -O ihex fw.elf fw.hex)

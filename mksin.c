@@ -4,7 +4,7 @@
 int
 main(void)
 {
-	int max = 100;
+	int max = 50;
 	int i, num = 36;
 	FILE *f = fopen("sin.txt", "wt");
 	for (i = 0; i < num; i++) {
