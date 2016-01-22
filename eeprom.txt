@@ -1,0 +1,7 @@
+0...35 - Table of sinuses
+36 - Amplitude at ctest_start(
+37 - Frequency at ctest_start
+38...68 - Table "frequency - amplitude"
+69 - delay step at start
+70 - delay num at start
+71 - flags at start

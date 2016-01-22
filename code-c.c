@@ -97,7 +97,7 @@ int main(void)
 	setup_control();
 	PORTC = DISABLED;
 	setup_uart(9600UL);
-	flags = FLAG_POT;
+	flags = eeread(FLAGS_START);
 	ph_u = 0;
 	ph_v = 24;
 	ph_w = 12;
