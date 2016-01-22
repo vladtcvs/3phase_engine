@@ -41,7 +41,7 @@ add_custom_target(fw.hex ${CMAKE_OBJCOPY} -j .text -j .data -O ihex fw.elf fw.he
 add_custom_target(programm ${CMAKE_AVRDUDE} -p ${AVRDUDEMCU} -P ${PPORT} -c stk500 -U flash:w:fw.hex -U eeprom:w:eesin.bin)
 add_custom_target(write_ee ${CMAKE_AVRDUDE} -p ${AVRDUDEMCU} -P ${PPORT} -c stk500 -U eeprom:w:eesin.bin)
 add_custom_target(test_connection ${CMAKE_AVRDUDE} -p ${AVRDUDEMCU} -P ${PPORT} -c stk500)
-add_custom_target(eesin.bin ${MKEE} eesin.bin ${CMAKE_SOURCE_DIR}/sin.txt ${CMAKE_SOURCE_DIR}/ampl.txt ${CMAKE_SOURCE_DIR}/freq.txt ${CMAKE_SOURCE_DIR}/ample_freq.txt)
+add_custom_target(eesin.bin ${MKEE} eesin.bin ${CMAKE_SOURCE_DIR}/sin.txt ${CMAKE_SOURCE_DIR}/ampl.txt ${CMAKE_SOURCE_DIR}/freq.txt ${CMAKE_SOURCE_DIR}/ample_freq.txt ${CMAKE_SOURCE_DIR}/ds.txt ${CMAKE_SOURCE_DIR}/dn.txt)
 add_custom_target(sin.txt ${MKSIN} ${CMAKE_SOURCE_DIR}/sin.txt)
 
 add_dependencies(sin.txt mksin)

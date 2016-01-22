@@ -88,6 +88,34 @@ static void set_freq(const char *buf, uint8_t len)
 	}
 }
 
+static void set_ds(const char *buf, uint8_t len)
+{
+	if (len > 2) {
+		uint16_t rw = read_uint(&buf[2], len - 2);
+		if (rw < 70)
+			rw = 70;
+		delay_step = rw;
+	} else {
+		tx_byte('\n');
+		tx_byte('\r');
+		print_int_dec(delay_step);
+	}
+}
+
+static void set_dn(const char *buf, uint8_t len)
+{
+	if (len > 2) {
+		uint16_t rw = read_uint(&buf[2], len - 2);
+		if (rw < 2)
+			rw = 2;
+		delay_num = rw;
+	} else {
+		tx_byte('\n');
+		tx_byte('\r');
+		print_int_dec(delay_num);
+	}
+}
+
 static void read_eeprom(const char *buf, uint8_t len)
 {
 	if (len < 3)
@@ -159,6 +187,14 @@ void shell_handle(const char *buf, uint8_t len)
 			read_eeprom(buf, len);
 		else if (buf[1] == 'W')
 			write_eeprom(buf, len);
+		break;
+	case 'D':
+		if (len == 1)
+			break;
+		if (buf[1] == 'S')
+			set_ds(buf, len);
+		else if (buf[1] == 'N')
+			set_dn(buf, len);
 		break;
 	}
 }

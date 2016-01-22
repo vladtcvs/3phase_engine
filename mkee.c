@@ -6,8 +6,8 @@ int main(int argc, char *argv[])
 	FILE *fo; 
 	int i;
 	int c;
-	if (argc != 6) {
-		printf("Usage: mkee eesin.bin sin.txt ampl.txt freq.txt");
+	if (argc != 8) {
+		printf("Usage: mkee eesin.bin sin.txt ampl.txt freq.txt ample_freq.txt ds.txt dn.txt");
 		return 1;
 	}
 	f = fopen(argv[2], "rt");
@@ -54,7 +54,24 @@ int main(int argc, char *argv[])
 		fprintf(fo, "%c", (char)c);
 	}
 	fclose(f);
-	for (i = 36 + 1 + 1 + 30; i < 256; i++)
+	f = fopen(argv[6], "rt");
+	if (f == NULL) {
+		printf("File %s not found\n", argv[6]);
+		return 1;
+	}
+	fscanf(f, "%i", &c);
+	fprintf(fo, "%c", (char)c);
+	fclose(f);
+	f = fopen(argv[7], "rt");
+	if (f == NULL) {
+		printf("File %s not found\n", argv[7]);
+		return 1;
+	}
+	fscanf(f, "%i", &c);
+	fprintf(fo, "%c", (char)c);
+	fclose(f);
+	
+	for (i = 36 + 1 + 1 + 30 + 1 + 1; i < 256; i++)
 		fprintf(fo, "%c", 255);
 	fclose(fo);
 	return 0;

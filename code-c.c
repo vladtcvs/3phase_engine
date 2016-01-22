@@ -21,6 +21,9 @@ byte ph_u, ph_v, ph_w;
 
 byte flags;
 
+uint16_t delay_step;
+uint8_t delay_num;
+
 void read_speed(void);
 void setup_control(void);
 
@@ -81,6 +84,8 @@ read_config(void)
 	}
 	ampl = eeread(AMPL_START);
 	period = FREQ_MAX/eeread(FREQ_START);
+	delay_step = eeread(DS_START);
+	delay_num = eeread(DN_START);
 }
 
 int main(void)
@@ -116,7 +121,7 @@ int main(void)
 			PORTC &= ~((1 << EU) | (1 << EV) | (1 << EW));
 
 			/* Wait to turn mosfets off */
-			_delay_loop_2(DELAY_NUM * DELAY_STEP);
+			_delay_loop_2(delay_num * delay_step);
 
 			/* Switch all bridges to HIGH */
 			PORTC |= ((1<<UU) | (1<<UV) | (1<<UW));
@@ -131,19 +136,19 @@ int main(void)
 				if (i == pwm_u || (i > pwm_u && u_u)) {
 					CLRBIT(PORTC, EU); // DISABLE U
 					u_u = 0;
-					cnt_u = DELAY_NUM;
+					cnt_u = delay_num;
 				}
 				if (i == pwm_v || (i > pwm_v && u_v)) {
 					CLRBIT(PORTC, EV); // DISABLE V
 					u_v = 0;
-					cnt_v = DELAY_NUM;
+					cnt_v = delay_num;
 				}
 				if (i == pwm_w  || (i > pwm_w && u_w)) {
 					CLRBIT(PORTC, EW); // DISABLE W
 					u_w = 0;
-					cnt_w = DELAY_NUM;
+					cnt_w = delay_num;
 				}
-				_delay_loop_2(DELAY_STEP);
+				_delay_loop_2(delay_step);
 				if (cnt_u == 0) {
 					CLRBIT(PORTC, UU);  // Set U to LOW
 					PORTC |= (1<<EU);
